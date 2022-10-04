@@ -64,9 +64,6 @@ MM_shared_df['UCSC_RefGene_Name-WT'] = MM_shared_df['UCSC_RefGene_Name-WT'].appl
 MM_shared_df['annotation-WT'] = MM_shared_df['annotation-WT'].apply(lambda x: x.split(';'))
 
 
-
-
-
 #-----------------------------START FOR LOOP----------------------------------------------------------
 empty_cells_list = list()
 for ID, genes_lst, annot_lst in zip(MM_shared_df['TargetID-WT'].tolist(), MM_shared_df['UCSC_RefGene_Name-WT'].tolist(), MM_shared_df['annotation-WT'].tolist()):         #take list with gens names from list created from MM_shared_df['UCSC_RefGene_Name-WT']
@@ -111,10 +108,74 @@ for ID, genes_lst, annot_lst in zip(MM_shared_df['TargetID-WT'].tolist(), MM_sha
 MM_shared_df.drop(empty_cells_list, axis = 0, inplace=True)                         #Del rows by index (index's of rows with empty cells in gene name and annot column
 
 
+#----AFTER DEL GENES THAT WERE NOT IN TSS1500 OR TSS200 POSITION WE NEED TO CHECK again sharing genes !!!!-----
+#Check sharing genes:
+deg_gn = DEG_shared_df['Gene_Symbol'].tolist()          #take genes names
+mm_gn = MM_shared_df['UCSC_RefGene_Name-WT'].tolist()   #take lits with genes names
+temp = list()                                           #temp list for single gene name
+for x in mm_gn:
+    for z in x:
+        if z not in temp:
+            temp.append(z)
+mm_gn = temp                                            #single gene names
+print(f'Check after TSS1500 TSS200 selection')
+print(f'DEG len: {len(deg_gn)}')
+print(f'MM len: {len(mm_gn)}')
+print('-----------------')
 
+#------Compare---------
+non_share_gne = list()
+share_gne_chck = list()
+for m_g in mm_gn:
+    if m_g in deg_gn:
+        share_gne_chck.append(m_g)
+    else:
+        non_share_gne.append(m_g)
 
+#------Find non_sharing gene index in MM df---
+##--In MM_shared_df['UCSC_RefGene_Name-WT'] all values in cells are repeated names of the same gene
 
+MM_shared_df['UCSC_RefGene_Name-WT'] = MM_shared_df['UCSC_RefGene_Name-WT'].apply(lambda x: x[0])   #convert gene list in col ['UCSC_RefGene_Name-WT'] to single gene name (string)
+non_sh_indx = list()
+for x in non_share_gne:
+    indx = MM_shared_df.index[(MM_shared_df['UCSC_RefGene_Name-WT'] == x)].tolist()
+    for ix in indx:
+        if ix not in non_sh_indx:
+            non_sh_indx.append(ix)
+#------del rows with non-sharing genes
+MM_shared_df.drop(non_sh_indx, axis = 0, inplace=True)                         #Del rows by index (index's of rows with empty cells in gene name and annot column
 
+#-----check nmb of genes-------
+deg_gn = DEG_shared_df['Gene_Symbol'].tolist()          #take genes names
+mm_gn = MM_shared_df['UCSC_RefGene_Name-WT'].tolist()   #take lits with genes names
+mm_gn = np.unique(mm_gn)
+
+print(f'DEG len: {len(deg_gn)}')
+print(f'MM len: {len(mm_gn)}')
+non_match = list(set(deg_gn) - set(mm_gn))          #comprae list of genes, find non sharing genes
+#!!!(from longer list - shorter list) !!!!
+print(non_match)
+print('-----------------')
+#----------DEL non sharing values from DEG_df-----------
+del_row_indx = list()
+for x in non_match:
+    indx = DEG_shared_df.index[(DEG_shared_df['Gene_Symbol'] == x)].tolist()
+    indx = indx[0]
+    del_row_indx.append(indx)
+#-----DEL NON SHARING GENES FROM DF------
+DEG_shared_df.drop(del_row_indx, axis = 0, inplace=True)
+
+#-----check nmb of genes-------
+deg_gn = DEG_shared_df['Gene_Symbol'].tolist()          #take genes names
+mm_gn = MM_shared_df['UCSC_RefGene_Name-WT'].tolist()   #take lits with genes names
+mm_gn = np.unique(mm_gn)
+
+print(f'DEG len: {len(deg_gn)}')
+print(f'MM len: {len(mm_gn)}')
+non_match = list(set(deg_gn) - set(mm_gn))          #comprae list of genes, find non sharing genes
+#!!!(from longer list - shorter list) !!!!
+print(non_match)
+print('-----------------')
 #---------------SAVE FILE------------------------
 DEG_shared_df.to_csv('DEG-MM shared/DEG_MM_shared.csv', sep= ';', header= True)
 MM_shared_df.to_csv('DEG-MM shared/MM_DEG_shared.csv', sep=';', header=True)
